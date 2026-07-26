@@ -43,10 +43,10 @@ function fmtPhone(raw) { const d = phoneDigits(raw); if (!d) return ""; let s = 
 const ALTYN = {
   id: "altyn-online-ipoteka", name: "Altyn Bank · Online Ipoteka", env: "test", enabled: true,
   restUrl: "http://ala33535.hsbk.nb:7900/JsonMortgage", soapUrl: "http://ala33535.hsbk.nb:7806/esb/mortgage/v1.0",
-  version: "TL 1.1", source: "BI", signType: "AITU", token: "", timeout: 30,
+  version: "TL 1.1", source: "Partner", signType: "AITU", token: "", timeout: 30,
   seller: { name: "Hayat Construction Group", bin: "151040016771", branchCode: "GPM000011", branchName: "Отдел продаж Hayat", managerFullName: "", managerPhone: "77016167773" },
   products: [
-    { internal: "Ипотека", code: "biMortgage", productRef: "ALTNM", kind: "mortgage", rate: 14, enabled: true },
+    { internal: "Ипотека", code: "BrokerMortgage", productRef: "ALTNM", kind: "mortgage", rate: 14, enabled: true },
     { internal: "7‑20‑25", code: "72025", productRef: "ALTNM", kind: "mortgage", rate: 7, enabled: true },
     { internal: "Рассрочка (Altyn‑i)", code: "installmentMortgage", productRef: "ALTNM INS", kind: "installment", rate: 0, enabled: true },
   ],
@@ -107,7 +107,7 @@ const PIPELINE = ["approved", "ready", "issued"];
 /* ============================================================ */
 export default function App() {
   const [tab, setTab] = useState("site");
-  const [connectors, setConnectors] = useState([ALTYN, { ...blankConnector("Freedom Bank · Онлайн-ипотека"), id: "freedom", source: "BI" }, { ...blankConnector("Банк ЦентрКредит · Super"), id: "bcc" }]);
+  const [connectors, setConnectors] = useState([ALTYN, { ...blankConnector("Freedom Bank · Онлайн-ипотека"), id: "freedom", source: "Partner" }, { ...blankConnector("Банк ЦентрКредит · Super"), id: "bcc" }]);
   const [orders, setOrders] = useState(SEED_ORDERS);
   const [loaded, setLoaded] = useState(false);
 
@@ -422,7 +422,7 @@ function CfgConn({ c, update }) {
         <Fld l="REST · StartMortgage" wide><input value={c.restUrl} onChange={(e) => update({ restUrl: e.target.value })} placeholder="http://.../JsonMortgage" style={{ ...inp, ...mono }} /></Fld>
         <Fld l="SOAP · ESB колбэки" wide><input value={c.soapUrl} onChange={(e) => update({ soapUrl: e.target.value })} placeholder="http://.../esb/mortgage/v1.0" style={{ ...inp, ...mono }} /></Fld>
         <Fld l="version"><input value={c.version} onChange={(e) => update({ version: e.target.value })} style={inp} /></Fld>
-        <Fld l="source"><input value={c.source} onChange={(e) => update({ source: e.target.value })} placeholder="BI" style={inp} /></Fld>
+        <Fld l="source"><input value={c.source} onChange={(e) => update({ source: e.target.value })} placeholder="Partner" style={inp} /></Fld>
         <Fld l="signType"><input value={c.signType} onChange={(e) => update({ signType: e.target.value })} placeholder="AITU" style={inp} /></Fld>
         <Fld l="Auth token"><input type="password" value={c.token} onChange={(e) => update({ token: e.target.value })} style={{ ...inp, ...mono }} /></Fld>
       </Grid>
@@ -445,7 +445,7 @@ function CfgProducts({ c, update }) {
     <table style={tbl}><thead><tr>{["Продукт", "code", "ProductRef", "Тип", "Ставка", "Вкл", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
       <tbody>{c.products.map((p, i) => (<tr key={i}>
         <td style={td}><input value={p.internal} onChange={(e) => set(i, "internal", e.target.value)} style={inp} /></td>
-        <td style={td}><input value={p.code} onChange={(e) => set(i, "code", e.target.value)} placeholder="biMortgage" style={{ ...inp, ...mono }} /></td>
+        <td style={td}><input value={p.code} onChange={(e) => set(i, "code", e.target.value)} placeholder="BrokerMortgage" style={{ ...inp, ...mono }} /></td>
         <td style={td}><input value={p.productRef} onChange={(e) => set(i, "productRef", e.target.value)} placeholder="ALTNM" style={{ ...inp, ...mono }} /></td>
         <td style={td}><select value={p.kind} onChange={(e) => set(i, "kind", e.target.value)} style={{ ...inp, minWidth: 110 }}><option value="mortgage">Ипотека</option><option value="installment">Рассрочка</option></select></td>
         <td style={td}><input value={p.rate} onChange={(e) => set(i, "rate", +e.target.value || 0)} style={{ ...inp, ...mono, width: 60 }} /></td>
@@ -454,7 +454,7 @@ function CfgProducts({ c, update }) {
       </tr>))}</tbody>
     </table>
     <button onClick={add} style={addBtn}>+ Продукт</button>
-    <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Коды: <span style={mono}>biMortgage · 72025 · installmentMortgage</span>; ref <span style={mono}>ALTNM · ALTNM INS</span>.</div>
+    <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Коды: <span style={mono}>BrokerMortgage · 72025 · installmentMortgage</span>; ref <span style={mono}>ALTNM · ALTNM INS</span>.</div>
   </Card>);
 }
 function CfgMap({ c, update }) {
