@@ -10,14 +10,14 @@ import React, { useState, useEffect, useMemo } from "react";
    питают флоу на сайте; оформленные заявки идут в «Заявки».
    ============================================================ */
 
-const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');`;
+const FONTS = `@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');`;
 const C = {
   bg: "#f5f6f8", cream: "#f5f3ef", panel: "#fff", ink: "#191c22", sub: "#6a7180", line: "#e4e7ec",
   gold: "#a8823c", goldDk: "#8a6a2c", goldSoft: "#f3ead0", indigo: "#4f46e5", indigoSoft: "#eef0fe",
   green: "#0e8f5b", greenSoft: "#e5f4ed", amber: "#b7791f", red: "#c0392b", sidebar: "#171a21",
 };
-const serif = { fontFamily: "'Fraunces', serif" };
-const body = { fontFamily: "'Hanken Grotesk', sans-serif" };
+const serif = { fontFamily: "'Museo Sans Cyrl', sans-serif" };
+const body = { fontFamily: "'Museo Sans Cyrl', sans-serif" };
 const mono = { fontFamily: "'JetBrains Mono', monospace" };
 const fmt = (n) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -463,28 +463,41 @@ function CfgProducts({ c, update }) {
   </Card>);
 }
 function CfgMap({ c, update }) {
-  const groups = useMemo(() => [...new Set(c.fieldMap.map((f) => f.group))], [c.fieldMap]);
-  const set = (i, v) => update({ fieldMap: c.fieldMap.map((f, j) => j === i ? { ...f, src: v } : f) });
-  return (<div style={{ display: "grid", gap: 14 }}>
-    <div style={{ fontSize: 13, color: C.sub }}>Соответствие полей StartMortgage полям источника (сайт / CRM).</div>
-    {groups.map((g) => (<Card key={g} title={g}>
-      <table style={tbl}><thead><tr>{["Поле спецификации", "Название", "Источник"].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
-        <tbody>{c.fieldMap.map((f, i) => f.group === g && (<tr key={i}>
-          <td style={{ ...td, ...mono, fontSize: 12, color: C.sub, whiteSpace: "nowrap" }}>{f.path}</td>
-          <td style={td}>{f.label}{f.req && <span style={{ color: C.red }}> *</span>}</td>
-          <td style={td}><input value={f.src} onChange={(e) => set(i, e.target.value)} style={{ ...inp, ...mono }} /></td>
+  const set = (i, k, v) => update({ fieldMap: c.fieldMap.map((f, j) => j === i ? { ...f, [k]: v } : f) });
+  const add = () => update({ fieldMap: [...c.fieldMap, { group: "Прочее", path: "", label: "", src: "", req: false }] });
+  const del = (i) => update({ fieldMap: c.fieldMap.filter((_, j) => j !== i) });
+  return (<Card title="Маппинг полей" note="Соответствие полей StartMortgage полям источника (сайт / CRM)">
+    <div style={{ overflowX: "auto" }}>
+      <table style={tbl}><thead><tr>{["Группа", "Поле спецификации", "Название", "Источник", "Обяз.", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+        <tbody>{c.fieldMap.map((f, i) => (<tr key={i}>
+          <td style={td}><input value={f.group} onChange={(e) => set(i, "group", e.target.value)} style={{ ...inp, minWidth: 90 }} /></td>
+          <td style={td}><input value={f.path} onChange={(e) => set(i, "path", e.target.value)} placeholder="body[].amount" style={{ ...inp, ...mono, minWidth: 180 }} /></td>
+          <td style={td}><input value={f.label} onChange={(e) => set(i, "label", e.target.value)} placeholder="Название поля" style={{ ...inp, minWidth: 120 }} /></td>
+          <td style={td}><input value={f.src} onChange={(e) => set(i, "src", e.target.value)} placeholder="order.amount" style={{ ...inp, ...mono, minWidth: 140 }} /></td>
+          <td style={{ ...td, textAlign: "center" }}><input type="checkbox" checked={!!f.req} onChange={(e) => set(i, "req", e.target.checked)} style={{ accentColor: C.indigo, width: 16, height: 16 }} /></td>
+          <td style={{ ...td, textAlign: "center" }}><button onClick={() => del(i)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer" }}>✕</button></td>
         </tr>))}</tbody>
       </table>
-    </Card>))}
-  </div>);
+    </div>
+    <button onClick={add} style={addBtn}>+ Поле</button>
+    <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Путь — как в теле StartMortgage (напр. <span style={mono}>customer[].taxCode</span>). Источник — поле сайта/CRM или константа в кавычках.</div>
+  </Card>);
 }
 function CfgStates({ c, update }) {
   const set = (i, k, v) => update({ states: c.states.map((s, j) => j === i ? { ...s, [k]: v } : s) });
+  const add = () => update({ states: [...c.states, { state: "", title: "", internal: "" }] });
+  const del = (i) => update({ states: c.states.filter((_, j) => j !== i) });
   return (<Card title="Статусы UpdateOrderState" note="Колбэк банка → внутренний статус">
-    <table style={tbl}><thead><tr>{["state", "stateTitle", "Внутренний"].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
-      <tbody>{c.states.map((s, i) => (<tr key={i}><td style={{ ...td, ...mono }}>{s.state}</td><td style={td}><input value={s.title} onChange={(e) => set(i, "title", e.target.value)} style={inp} /></td><td style={td}><input value={s.internal} onChange={(e) => set(i, "internal", e.target.value)} style={{ ...inp, ...mono }} /></td></tr>))}</tbody>
+    <table style={tbl}><thead><tr>{["state (банк)", "stateTitle", "Внутренний", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
+      <tbody>{c.states.map((s, i) => (<tr key={i}>
+        <td style={td}><input value={s.state} onChange={(e) => set(i, "state", e.target.value)} placeholder="approve" style={{ ...inp, ...mono }} /></td>
+        <td style={td}><input value={s.title} onChange={(e) => set(i, "title", e.target.value)} placeholder="Одобрено" style={inp} /></td>
+        <td style={td}><input value={s.internal} onChange={(e) => set(i, "internal", e.target.value)} placeholder="approved" style={{ ...inp, ...mono }} /></td>
+        <td style={{ ...td, textAlign: "center" }}><button onClick={() => del(i)} style={{ background: "none", border: "none", color: C.red, cursor: "pointer" }}>✕</button></td>
+      </tr>))}</tbody>
     </table>
-    <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Спец: <span style={mono}>approve · reject · readyRegistration · signed</span>.</div>
+    <button onClick={add} style={addBtn}>+ Статус</button>
+    <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Спец: <span style={mono}>approve · reject · readyRegistration · signed</span>. Внутренний статус двигает заявку в разделе «Заявки».</div>
   </Card>);
 }
 function CfgTest({ c }) {
@@ -554,7 +567,7 @@ function Loading({ text, sub }) { return <div style={{ textAlign: "center", padd
 function ApiNote({ children }) { return <div style={{ ...mono, fontSize: 11, color: "#a49e92", textAlign: "center", marginTop: 12 }}>{children}</div>; }
 function Gold({ children, disabled, onClick }) { return <button disabled={disabled} onClick={onClick} style={{ width: "100%", background: disabled ? "#d8d2c6" : C.gold, color: "#fff", border: "none", padding: "13px", borderRadius: 11, ...body, fontWeight: 700, fontSize: 15, cursor: disabled ? "not-allowed" : "pointer", marginTop: 4 }}>{children}</button>; }
 function Ghost({ children, onClick }) { return <button onClick={onClick} style={{ background: C.panel, color: C.ink, border: `1px solid ${C.line}`, padding: "13px 20px", borderRadius: 11, ...body, fontWeight: 600, fontSize: 14, cursor: "pointer", marginTop: 4, whiteSpace: "nowrap" }}>{children}</button>; }
-const inp = { width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${C.line}`, background: "#fff", fontSize: 13.5, fontFamily: "'Hanken Grotesk', sans-serif", boxSizing: "border-box", color: C.ink };
+const inp = { width: "100%", padding: "9px 11px", borderRadius: 8, border: `1px solid ${C.line}`, background: "#fff", fontSize: 13.5, fontFamily: "'Museo Sans Cyrl', sans-serif", boxSizing: "border-box", color: C.ink };
 const cell = { padding: "11px 14px" };
 const tbl = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
 const th = { textAlign: "left", padding: "6px 8px", fontSize: 11.5, color: C.sub, fontWeight: 600, borderBottom: `1px solid ${C.line}`, whiteSpace: "nowrap" };
