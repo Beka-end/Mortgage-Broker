@@ -35,14 +35,14 @@ const ALTYN = {
   restUrl: "http://ala33535.hsbk.nb:7900/JsonMortgage",
   soapUrl: "http://ala33535.hsbk.nb:7806/esb/mortgage/v1.0",
   version: "TL 1.1",
-  source: "BI",
+  source: "Partner",
   authType: "token",
   token: "",
   signType: "AITU",
   timeout: 30,
   seller: { name: "Hayat Construction Group", bin: "151040016771", branchCode: "GPM000011", branchName: "Отдел продаж Hayat", managerFullName: "", managerPhone: "77016167773" },
   products: [
-    { internal: "Ипотека", code: "biMortgage", productRef: "ALTNM", kind: "mortgage", enabled: true },
+    { internal: "Ипотека", code: "BrokerMortgage", productRef: "ALTNM", kind: "mortgage", enabled: true },
     { internal: "7‑20‑25", code: "72025", productRef: "ALTNM", kind: "mortgage", enabled: true },
     { internal: "Рассрочка (Altyn‑i)", code: "installmentMortgage", productRef: "ALTNM INS", kind: "installment", enabled: true },
   ],
@@ -86,7 +86,7 @@ const TABS = [["conn", "Подключение"], ["prod", "Продукты"], 
 
 /* ============================================================ */
 export default function App() {
-  const [connectors, setConnectors] = useState([ALTYN, { ...blankConnector("Freedom Bank · Онлайн-ипотека"), id: "freedom", source: "BI" }, { ...blankConnector("Банк ЦентрКредит · Super"), id: "bcc" }]);
+  const [connectors, setConnectors] = useState([ALTYN, { ...blankConnector("Freedom Bank · Онлайн-ипотека"), id: "freedom", source: "Partner" }, { ...blankConnector("Банк ЦентрКредит · Super"), id: "bcc" }]);
   const [selId, setSelId] = useState("altyn-online-ipoteka");
   const [tab, setTab] = useState("conn");
   const [loaded, setLoaded] = useState(false);
@@ -171,7 +171,7 @@ function TabConnection({ c, update }) {
           <F l="REST · StartMortgage (URL)" wide><Inp mono v={c.restUrl} on={(v) => update({ restUrl: v })} ph="http://.../JsonMortgage" /></F>
           <F l="SOAP · ESB колбэки (URL)" wide><Inp mono v={c.soapUrl} on={(v) => update({ soapUrl: v })} ph="http://.../esb/mortgage/v1.0" /></F>
           <F l="version"><Inp v={c.version} on={(v) => update({ version: v })} /></F>
-          <F l="source (код партнёра)"><Inp v={c.source} on={(v) => update({ source: v })} ph="BI" /></F>
+          <F l="source (код партнёра)"><Inp v={c.source} on={(v) => update({ source: v })} ph="Partner" /></F>
           <F l="signType"><Inp v={c.signType} on={(v) => update({ signType: v })} ph="AITU" /></F>
           <F l="Timeout, сек"><Inp v={c.timeout} on={(v) => update({ timeout: +v || 0 })} /></F>
           <F l="Auth token" wide><Inp mono type="password" v={c.token} on={(v) => update({ token: v })} ph="Bearer / API key" /></F>
@@ -205,7 +205,7 @@ function TabProducts({ c, update }) {
           {c.products.map((p, i) => (
             <tr key={i}>
               <td style={td}><Inp v={p.internal} on={(v) => set(i, "internal", v)} /></td>
-              <td style={td}><Inp mono v={p.code} on={(v) => set(i, "code", v)} ph="biMortgage / 72025" /></td>
+              <td style={td}><Inp mono v={p.code} on={(v) => set(i, "code", v)} ph="BrokerMortgage / 72025" /></td>
               <td style={td}><Inp mono v={p.productRef} on={(v) => set(i, "productRef", v)} ph="ALTNM / ALTNM INS" /></td>
               <td style={td}>
                 <select value={p.kind} onChange={(e) => set(i, "kind", e.target.value)} style={{ ...inp, minWidth: 120 }}>
@@ -219,7 +219,7 @@ function TabProducts({ c, update }) {
         </tbody>
       </table>
       <button onClick={add} style={addBtn}>+ Продукт</button>
-      <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Коды из спецификации: <span style={mono}>biMortgage</span>, <span style={mono}>72025</span> (7‑20‑25), <span style={mono}>installmentMortgage</span>; ProductReferenceId <span style={mono}>ALTNM</span> / <span style={mono}>ALTNM INS</span>.</div>
+      <div style={{ fontSize: 12, color: C.sub, marginTop: 10 }}>Коды из спецификации: <span style={mono}>BrokerMortgage</span>, <span style={mono}>72025</span> (7‑20‑25), <span style={mono}>installmentMortgage</span>; ProductReferenceId <span style={mono}>ALTNM</span> / <span style={mono}>ALTNM INS</span>.</div>
     </Card>
   );
 }
