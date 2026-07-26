@@ -81,8 +81,12 @@ function offersFrom(connector, price, down, months) {
   return (connector?.products || []).filter((p) => p.enabled).map((p, i) => {
     const term = p.kind === "installment" ? Math.min(months, 36) : months;
     const m = annuity(loan, p.rate, term);
-    return { id: p.code + i, bank: connector.name.split(" · ")[0], name: p.internal, kind: p.kind, rate: p.rate, gesv: p.rate === 0 ? 0 : +(p.rate + 1.2).toFixed(1), loan, term, monthly: Math.round(m), productRef: p.productRef };
+    return { id: (connector.id || "") + ":" + p.code + i, bank: connector.name.split(" · ")[0], name: p.internal, kind: p.kind, rate: p.rate, gesv: p.rate === 0 ? 0 : +(p.rate + 1.2).toFixed(1), loan, term, monthly: Math.round(m), productRef: p.productRef };
   }).sort((a, b) => a.rate - b.rate);
+}
+
+function offersFromMany(connectors, price, down, months) {
+  return (connectors || []).filter((c) => c.enabled).flatMap((c) => offersFrom(c, price, down, months)).sort((a, b) => a.rate - b.rate);
 }
 
 /* ---- Проекты Hayat ----------------------------------------------- */
@@ -120,7 +124,8 @@ export default function App() {
   })(); }, []);
   useEffect(() => { if (loaded) { try { window.storage.set("plat:conn", JSON.stringify(connectors)); window.storage.set("plat:orders", JSON.stringify(orders)); } catch (e) {} } }, [connectors, orders, loaded]);
 
-  const activeConnector = connectors.find((c) => c.enabled) || connectors[0];
+  const enabledConnectors = connectors.filter((c) => c.enabled);
+  const activeConnectors = enabledConnectors.length ? enabledConnectors : [connectors[0]];
   const addOrder = (o) => setOrders((s) => [o, ...s]);
   const advanceOrder = (ref) => setOrders((s) => s.map((o) => { if (o.ref !== ref) return o; const i = PIPELINE.indexOf(o.state); return i >= 0 && i < PIPELINE.length - 1 ? { ...o, state: PIPELINE[i + 1] } : o; }));
 
@@ -142,7 +147,7 @@ export default function App() {
         <div style={{ fontSize: 12, color: "#8b93a2" }}>застройщик → <b style={{ color: C.gold }}>брокер</b> → банк</div>
       </div>
 
-      {tab === "site" && <SiteView connector={activeConnector} onOrder={addOrder} states={activeConnector.states} />}
+      {tab === "site" && <SiteView connectors={activeConnectors} onOrder={addOrder} />}
       {tab === "orders" && <OrdersView orders={orders} advance={advanceOrder} />}
       {tab === "banks" && <BanksView connectors={connectors} setConnectors={setConnectors} />}
     </div>
@@ -150,7 +155,7 @@ export default function App() {
 }
 
 /* ======================= САЙТ ======================= */
-function SiteView({ connector, onOrder }) {
+function SiteView({ connectors, onOrder }) {
   const [modal, setModal] = useState(null);
   return (
     <div style={{ background: C.cream }}>
@@ -158,7 +163,7 @@ function SiteView({ connector, onOrder }) {
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <div style={{ display: "inline-block", border: `1px solid ${C.gold}`, color: C.gold, padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: 600, marginBottom: 22 }}>Онлайн-ипотека и рассрочка · одобрение по ИИН</div>
           <h1 style={{ ...serif, fontWeight: 600, fontSize: "clamp(32px,5.5vw,58px)", lineHeight: 1.03, margin: 0, maxWidth: 700, letterSpacing: "-1.2px" }}>Ничего лишнего — только лучшее</h1>
-          <p style={{ fontSize: "clamp(15px,2vw,18px)", color: "#c7c2b8", maxWidth: 540, marginTop: 18, lineHeight: 1.5 }}>Жилые комплексы Hayat в Алматы. Выберите квартиру и оформите финансирование онлайн — заявка уходит в банк через {connector.name.split(" · ")[0]}.</p>
+          <p style={{ fontSize: "clamp(15px,2vw,18px)", color: "#c7c2b8", maxWidth: 540, marginTop: 18, lineHeight: 1.5 }}>Жилые комплексы Hayat в Алматы. Выберите квартиру и оформите финансирование онлайн — заявка уходит сразу в банки-партнёры.</p>
           <svg viewBox="0 0 1200 90" style={{ display: "block", width: "100%", marginTop: 34 }} preserveAspectRatio="none">
             {Array.from({ length: 28 }).map((_, i) => { const w = 43, h = 22 + ((i * 41) % 60); return <rect key={i} x={i * w} y={90 - h} width={w - 5} height={h} fill="rgba(168,130,60,.10)" />; })}
           </svg>
@@ -198,14 +203,14 @@ function SiteView({ connector, onOrder }) {
         </div>
       </footer>
 
-      {modal && <BrokerFlow project={modal} connector={connector} onClose={() => setModal(null)} onOrder={onOrder} />}
+      {modal && <BrokerFlow project={modal} connectors={connectors} onClose={() => setModal(null)} onOrder={onOrder} />}
     </div>
   );
 }
 
 /* ---- Брокерский флоу (схема «Золотая рассрочка») ----------------- */
 const STEPS = ["Заявка", "Согласие ПКБ/ГЦВП", "Решение банка", "Оформление ДДУ", "Выдача"];
-function BrokerFlow({ project, connector, onClose, onOrder }) {
+function BrokerFlow({ project, connectors, onClose, onOrder }) {
   const [step, setStep] = useState(0);
   const [downPct, setDownPct] = useState(30), [months, setMonths] = useState(180);
   const [name, setName] = useState(""), [iin, setIin] = useState(""), [phone, setPhone] = useState("");
@@ -220,7 +225,7 @@ function BrokerFlow({ project, connector, onClose, onOrder }) {
     await wait(600); // POST /document/customer-agreement
     const oid = "ORD-" + rnd(); setApi({ order_id: oid }); setStep(2); // POST /order/place
     await wait(1400); // GET /order/{id}/status  (SendOffers)
-    const offers = offersFrom(connector, price, down, months);
+    const offers = offersFromMany(connectors, price, down, months);
     setApi({ order_id: oid, decision: offers.length ? "approved" : "rejected", offers }); setBusy(false);
   };
   const pick = async (o) => { setBusy(true); await wait(500); setChosen(o); setStep(3); setBusy(false); }; // POST /order/confirm
@@ -232,11 +237,11 @@ function BrokerFlow({ project, connector, onClose, onOrder }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(23,22,26,.55)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(23,22,26,.55)", display: "grid", placeItems: "center", padding: 16, zIndex: 60 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: C.cream, borderRadius: 18, width: 600, maxWidth: "100%", maxHeight: "94vh", overflow: "auto" }}>
         <div style={{ background: `linear-gradient(150deg,hsl(${project.hue} 22% 28%),hsl(${project.hue} 24% 15%))`, color: "#fff", padding: "18px 24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div><div style={{ fontSize: 12, opacity: .8 }}>Hayat → брокер → {connector.name.split(" · ")[0]}</div><div style={{ ...serif, fontWeight: 700, fontSize: 21 }}>{project.name}</div></div>
+            <div><div style={{ fontSize: 12, opacity: .8 }}>Hayat → брокер → банки-партнёры</div><div style={{ ...serif, fontWeight: 700, fontSize: 21 }}>{project.name}</div></div>
             <button onClick={onClose} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "none", width: 30, height: 30, borderRadius: 8, cursor: "pointer", fontSize: 17 }}>×</button>
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 14, flexWrap: "wrap" }}>
@@ -356,7 +361,7 @@ function OrdersView({ orders, advance }) {
 function OrderDetail({ o, advance, onClose }) {
   const idx = PIPELINE.indexOf(o.state);
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(23,22,26,.5)", display: "flex", justifyContent: "flex-end", zIndex: 60 }}>
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(23,22,26,.5)", display: "flex", justifyContent: "flex-end", zIndex: 60 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: C.bg, width: 440, maxWidth: "100%", height: "100%", overflow: "auto", padding: 24 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}><div><div style={{ fontWeight: 700, fontSize: 20 }}>{o.project}</div><div style={{ ...mono, fontSize: 12.5, color: C.sub }}>{o.ref} · банк {o.order_id}</div></div><button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: C.sub }}>×</button></div>
       <div style={{ background: C.panel, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
